@@ -9,6 +9,8 @@ from ..claude_analyst import analyze, load_prompt
 from ..config import Config
 from ..cftc import fetch_cot_data, format_cot_for_analyst
 from ..earnings import fetch_all_earnings, format_earnings_for_analyst
+from ..fred import fetch_fred_indicators, format_fred_for_analyst
+from ..sector_rotation import compute_sector_rotation, format_sector_for_analyst
 from ..sentiment import fetch_sentiment, format_sentiment_for_analyst
 from ..events import upcoming_earnings
 from ..fetch import enrich_with_bodies
@@ -90,6 +92,8 @@ def _build_user_prompt(
     earnings_profiles=None,
     sentiment=None,
     cot_data=None,
+    sector_perfs=None,
+    fred_data=None,
 ) -> str:
     watchlist_str = ", ".join(f"{t} ({n})" for t, n in cfg.watchlist)
     parts = [
@@ -121,6 +125,14 @@ def _build_user_prompt(
 
     if cot_data:
         parts.append(format_cot_for_analyst(cot_data))
+        parts.append("")
+
+    if sector_perfs:
+        parts.append(format_sector_for_analyst(sector_perfs))
+        parts.append("")
+
+    if fred_data:
+        parts.append(format_fred_for_analyst(fred_data))
         parts.append("")
 
     if macro_quotes:
@@ -185,12 +197,14 @@ def run(cfg: Config) -> SlotResult:
     regime = compute_regime()
     sentiment = fetch_sentiment(list(cfg.watchlist))
     cot_data = fetch_cot_data()
+    sector_perfs = compute_sector_rotation()
+    fred_data = fetch_fred_indicators()
 
     system_prompt = load_prompt(cfg, "market_close_analyst")
     user_prompt = _build_user_prompt(
         cfg, articles, history, past_analyses,
         tech_snaps, val_snaps, macro_quotes, regime, earnings_profiles,
-        sentiment, cot_data,
+        sentiment, cot_data, sector_perfs, fred_data,
     )
     analysis_md = analyze(cfg, system_prompt, user_prompt)
     save_analysis(cfg, CATEGORY, date_str, analysis_md)

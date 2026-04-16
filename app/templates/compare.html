@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Compare — Market Intel{% endblock %}
+{% block content %}
+
+<div class="mb-4">
+    <a href="/history" class="text-blue-400 text-sm hover:underline">&larr; History</a>
+</div>
+
+<h1 class="text-xl font-bold mb-4">🔀 对比分析</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="bg-gray-900 rounded-lg p-5 border border-gray-800">
+        <div class="mb-3 pb-3 border-b border-gray-800">
+            <div class="text-sm text-gray-400">{{ a_category }}</div>
+            <div class="font-mono text-lg">{{ a_date }}</div>
+        </div>
+        <div class="analysis-content text-gray-300 text-xs leading-relaxed">{{ a_content }}</div>
+    </div>
+    <div class="bg-gray-900 rounded-lg p-5 border border-gray-800">
+        <div class="mb-3 pb-3 border-b border-gray-800">
+            <div class="text-sm text-gray-400">{{ b_category }}</div>
+            <div class="font-mono text-lg">{{ b_date }}</div>
+        </div>
+        <div class="analysis-content text-gray-300 text-xs leading-relaxed">{{ b_content }}</div>
+    </div>
+</div>
+
+{% endblock %}

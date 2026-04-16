@@ -2,20 +2,40 @@
 {% block title %}History — Market Intel{% endblock %}
 {% block content %}
 
-<h1 class="text-xl font-bold mb-4">📚 Analysis History</h1>
+<div class="flex justify-between items-center mb-4">
+    <h1 class="text-xl font-bold">📚 Analysis History</h1>
+    <div class="text-sm text-gray-400">{{ entries|length }} entries</div>
+</div>
 
-<div class="bg-gray-900 rounded-lg border border-gray-800">
+{# U4: Filter controls #}
+<div class="bg-gray-900 rounded-lg p-3 border border-gray-800 mb-4 flex flex-wrap gap-3 items-center">
+    <input type="text" id="search-box" placeholder="搜索日期 (YYYY-MM-DD)..."
+           class="bg-gray-800 text-gray-100 border border-gray-700 rounded px-3 py-1.5 text-sm flex-1 min-w-[200px]">
+    <select id="category-filter" class="bg-gray-800 text-gray-100 border border-gray-700 rounded px-3 py-1.5 text-sm">
+        <option value="">所有类别</option>
+        <option value="china">🇨🇳 China Brief</option>
+        <option value="market_close">🏁 US Close</option>
+        <option value="weekly_review">📋 Weekly Review</option>
+    </select>
+    <button onclick="clearFilters()" class="bg-gray-700 hover:bg-gray-600 text-sm px-3 py-1.5 rounded">清除</button>
+    <span class="text-xs text-gray-500">Shift+点击 对比两份分析</span>
+</div>
+
+<div class="bg-gray-900 rounded-lg border border-gray-800" id="entries-list">
     {% for e in entries %}
-    <a href="/analysis/{{ e.category }}/{{ e.date }}"
-       class="flex justify-between items-center px-4 py-3 border-b border-gray-800 last:border-0 hover:bg-gray-800/50">
+    <a href="#" data-href="/analysis/{{ e.category }}/{{ e.date }}"
+       data-category="{{ e.category }}"
+       data-date="{{ e.date }}"
+       onclick="handleEntryClick(event, this)"
+       class="entry-row flex justify-between items-center px-4 py-3 border-b border-gray-800 last:border-0 hover:bg-gray-800/50">
         <div>
-            <span class="inline-block w-20 text-xs px-2 py-0.5 rounded
+            <span class="inline-block w-24 text-xs px-2 py-0.5 rounded
                 {% if e.category == 'china' %}bg-red-900/50 text-red-300
                 {% elif e.category == 'market_close' %}bg-blue-900/50 text-blue-300
-                {% else %}bg-gray-700 text-gray-300{% endif %}">
+                {% else %}bg-purple-900/50 text-purple-300{% endif %}">
                 {{ e.category }}
             </span>
-            <span class="ml-3 text-gray-200">{{ e.date }}</span>
+            <span class="ml-3 text-gray-200 font-mono">{{ e.date }}</span>
         </div>
         <span class="text-gray-500 text-xs">{{ "%.1f"|format(e.size / 1024) }} KB</span>
     </a>
@@ -23,5 +43,45 @@
     <p class="text-gray-500 text-sm p-4">No analyses yet.</p>
     {% endfor %}
 </div>
+
+<script>
+const searchBox = document.getElementById('search-box');
+const catFilter = document.getElementById('category-filter');
+const rows = document.querySelectorAll('.entry-row');
+let compareFirst = null;
+
+function applyFilters() {
+    const q = searchBox.value.toLowerCase();
+    const cat = catFilter.value;
+    rows.forEach(r => {
+        const date = r.dataset.date.toLowerCase();
+        const category = r.dataset.category;
+        const matchSearch = !q || date.includes(q);
+        const matchCat = !cat || category === cat;
+        r.style.display = (matchSearch && matchCat) ? '' : 'none';
+    });
+}
+function clearFilters() {
+    searchBox.value = '';
+    catFilter.value = '';
+    applyFilters();
+}
+function handleEntryClick(e, el) {
+    e.preventDefault();
+    if (e.shiftKey) {
+        if (!compareFirst) {
+            compareFirst = el;
+            el.style.background = '#1e40af33';
+        } else {
+            const url = `/compare?a=${compareFirst.dataset.category}/${compareFirst.dataset.date}&b=${el.dataset.category}/${el.dataset.date}`;
+            window.location = url;
+        }
+    } else {
+        window.location = el.dataset.href;
+    }
+}
+searchBox.addEventListener('input', applyFilters);
+catFilter.addEventListener('change', applyFilters);
+</script>
 
 {% endblock %}

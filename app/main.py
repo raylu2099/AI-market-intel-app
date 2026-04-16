@@ -119,6 +119,48 @@ async def dashboard(request: Request):
     })
 
 
+def _parse_sections(content: str) -> list[dict]:
+    """U7: Parse analysis Markdown into collapsible sections by emoji headers."""
+    import re
+    # Match section headers: lines with emoji + bold tag
+    markers = ["📝", "💹", "🎯", "🔀", "🌐", "📋", "🛡️", "🔗", "📊"]
+    lines = content.split("\n")
+    sections = []
+    current_title = None
+    current_lines: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        # Detect section header: contains an emoji marker + bold or all caps title
+        is_header = any(m in stripped[:5] for m in markers) and ("<b>" in stripped or "**" in stripped)
+        if is_header:
+            if current_title:
+                sections.append({"title": current_title, "content": "\n".join(current_lines).strip()})
+            # Clean title: strip HTML tags and markdown
+            title = re.sub(r"<[^>]+>", "", stripped).replace("**", "").strip()
+            current_title = title
+            current_lines = []
+        else:
+            current_lines.append(line)
+    if current_title:
+        sections.append({"title": current_title, "content": "\n".join(current_lines).strip()})
+    return sections
+
+
+def _neighbor_dates(cfg, category: str, date: str) -> tuple[str | None, str | None]:
+    """Return (prev_date, next_date) for navigation."""
+    d = cfg.analyses_dir(category)
+    if not d.exists():
+        return None, None
+    dates = sorted(p.stem for p in d.glob("*.md"))
+    try:
+        idx = dates.index(date)
+    except ValueError:
+        return None, None
+    prev_d = dates[idx - 1] if idx > 0 else None
+    next_d = dates[idx + 1] if idx + 1 < len(dates) else None
+    return prev_d, next_d
+
+
 @app.get("/analysis/{category}/{date}", response_class=HTMLResponse)
 async def view_analysis(request: Request, category: str, date: str):
     cfg = _cfg()
@@ -126,11 +168,37 @@ async def view_analysis(request: Request, category: str, date: str):
     if not path.exists():
         raise HTTPException(404, f"No analysis for {category}/{date}")
     content = path.read_text(encoding="utf-8")
+    sections = _parse_sections(content)
+    prev_d, next_d = _neighbor_dates(cfg, category, date)
     return templates.TemplateResponse("analysis.html", {
         "request": request,
         "category": category,
         "date": date,
         "content": content,
+        "sections": sections,
+        "prev_url": f"/analysis/{category}/{prev_d}" if prev_d else "",
+        "next_url": f"/analysis/{category}/{next_d}" if next_d else "",
+        "now": datetime.now(),
+    })
+
+
+@app.get("/compare", response_class=HTMLResponse)
+async def compare(request: Request, a: str = "", b: str = ""):
+    """Side-by-side analysis comparison. Params: a=category/date, b=category/date"""
+    cfg = _cfg()
+    def _load(ref: str):
+        try:
+            cat, dt = ref.split("/")
+            p = cfg.analyses_dir(cat) / f"{dt}.md"
+            return cat, dt, p.read_text(encoding="utf-8") if p.exists() else "Not found"
+        except Exception:
+            return "—", "—", "Invalid reference"
+    a_cat, a_dt, a_content = _load(a)
+    b_cat, b_dt, b_content = _load(b)
+    return templates.TemplateResponse("compare.html", {
+        "request": request,
+        "a_category": a_cat, "a_date": a_dt, "a_content": a_content,
+        "b_category": b_cat, "b_date": b_dt, "b_content": b_content,
         "now": datetime.now(),
     })
 

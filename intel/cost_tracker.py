@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+import threading
 from pathlib import Path
 
 from .config import Config
@@ -14,30 +15,34 @@ from .timeutil import today_str
 
 
 _DAILY_COSTS: dict[str, float] = {}
+_LOCK = threading.Lock()
 
 
 def record_cost(component: str, amount: float) -> None:
-    """Called inline by search/summary/events modules."""
-    _DAILY_COSTS[component] = _DAILY_COSTS.get(component, 0) + amount
+    """Thread-safe cost accumulation (S4)."""
+    with _LOCK:
+        _DAILY_COSTS[component] = _DAILY_COSTS.get(component, 0) + amount
 
 
 def get_session_costs() -> dict[str, float]:
-    return dict(_DAILY_COSTS)
+    with _LOCK:
+        return dict(_DAILY_COSTS)
 
 
 def save_daily_costs(cfg: Config, slot: str) -> None:
-    """Append this run's costs to the daily ledger."""
-    if not _DAILY_COSTS:
-        return
+    """Append costs to daily ledger, thread-safe snapshot+clear (S4)."""
+    with _LOCK:
+        if not _DAILY_COSTS:
+            return
+        snapshot = dict(_DAILY_COSTS)
+        _DAILY_COSTS.clear()
     date_str = today_str(cfg.market_tz)
     ledger_dir = cfg.data_dir / "costs"
     ledger_dir.mkdir(parents=True, exist_ok=True)
     path = ledger_dir / f"{date_str}.jsonl"
-
-    entry = {"slot": slot, "costs": dict(_DAILY_COSTS)}
+    entry = {"slot": slot, "costs": snapshot}
     with path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
-    _DAILY_COSTS.clear()
 
 
 def load_weekly_costs(cfg: Config, days: int = 7) -> dict[str, float]:

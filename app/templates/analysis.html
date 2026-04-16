@@ -2,21 +2,38 @@
 {% block title %}{{ category|title }} — {{ date }} — Market Intel{% endblock %}
 {% block content %}
 
-<div class="mb-4">
+<div class="mb-4 flex justify-between items-center">
     <a href="/history" class="text-blue-400 text-sm hover:underline">&larr; History</a>
+    <div class="flex gap-2">
+        <a href="{{ prev_url }}" class="{% if not prev_url %}opacity-30 pointer-events-none{% endif %} text-xs bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded">← 上一天</a>
+        <a href="{{ next_url }}" class="{% if not next_url %}opacity-30 pointer-events-none{% endif %} text-xs bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded">下一天 →</a>
+    </div>
 </div>
 
 <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
-    <div class="flex justify-between items-center mb-4">
+    <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-800">
         <h1 class="text-xl font-bold">
             {% if category == 'china' %}🇨🇳 China Brief
             {% elif category == 'market_close' %}🏁 US Close
             {% elif category == 'weekly_review' %}📋 Weekly Review
             {% else %}{{ category }}{% endif %}
         </h1>
-        <span class="text-gray-400">{{ date }}</span>
+        <span class="text-gray-400 font-mono">{{ date }}</span>
     </div>
+
+    {# U7: Section cards — each section is collapsible #}
+    {% if sections %}
+    {% for s in sections %}
+    <details class="mb-3 bg-gray-800/30 rounded border border-gray-700" {% if loop.index <= 2 %}open{% endif %}>
+        <summary class="px-4 py-2 cursor-pointer font-semibold text-gray-200 hover:bg-gray-800/60 rounded">
+            {{ s.title }}
+        </summary>
+        <div class="px-4 py-3 border-t border-gray-700 analysis-content text-gray-300 text-sm">{{ s.content }}</div>
+    </details>
+    {% endfor %}
+    {% else %}
     <div class="analysis-content text-gray-200 text-sm leading-relaxed">{{ content }}</div>
+    {% endif %}
 </div>
 
 {% endblock %}
