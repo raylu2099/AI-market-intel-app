@@ -54,13 +54,23 @@
 
 ```
 [POSITIONS]
-TICKER | DIRECTION | ENTRY_PRICE | DATE | HORIZON | THESIS_1LINE
-GLD | LONG | 4842 | 2026-04-16 | weeks | Hormuz risk premium + dollar weakness
-NVDA | NEUTRAL | 199 | 2026-04-16 | days | RSI 71 overbought, wait for pullback
+TICKER | DIR | SIZE_PCT | ENTRY | DATE | STATUS | RISK_WT | HORIZON | STOP | THESIS
+GLD | LONG | 5% | 4842 | 2026-04-16 | OPEN | MED | weeks | 4600 | Hormuz risk + dollar weakness
+NVDA | NEUTRAL | 0% | 199 | 2026-04-16 | WATCH | LOW | days | - | RSI 71 overbought, wait
 [/POSITIONS]
 ```
 
-只列今日新增或调整的仓位。ENTRY_PRICE 用当前收盘价。DATE 用今日日期。不要重复之前已建立且未变化的仓位。
+字段说明：SIZE_PCT=建议仓位占比, STATUS=OPEN/WATCH/CLOSED, RISK_WT=LOW/MED/HIGH, STOP=硬止损价位（NEUTRAL 用 -）。
+
+只列今日新增或调整的仓位。不重复已建立且未变化的。
+
+### 3e. 🛡️ 组合自检（必须输出）
+
+输出完所有仓位后，做一次组合级风险检查：
+- **集中度**：今日所有活跃仓位的行业/地区分布（如：科技 60%, 大宗 20%, 债券 20%）
+- **相关性风险**：哪些仓位会在同一事件（如 Fed 加息、中美冲突）下同向大幅波动
+- **最大单日回撤**：如果最差情景发生（情景矩阵的坏情景），组合一天可能亏多少
+- **建议调整**：如果集中度过高或相关性过强，建议用什么对冲
 
 ## 然后追加
 

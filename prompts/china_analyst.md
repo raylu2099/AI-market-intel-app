@@ -59,13 +59,20 @@
 
 ```
 [POSITIONS]
-TICKER | DIRECTION | ENTRY_PRICE | DATE | HORIZON | THESIS_1LINE
-GLD | LONG | 4842 | 2026-04-16 | months | Dollar-reserve weaponization + CB diversification
-KWEB | LONG | 29.64 | 2026-04-16 | weeks | China AI cost advantage + HK IPO pipeline
+TICKER | DIR | SIZE_PCT | ENTRY | DATE | STATUS | RISK_WT | HORIZON | STOP | THESIS
+GLD | LONG | 5% | 4842 | 2026-04-16 | OPEN | MED | months | 4600 | Dollar-reserve weaponization
+KWEB | LONG | 3% | 29.64 | 2026-04-16 | OPEN | MED | weeks | 27.50 | China AI + HK IPO pipeline
 [/POSITIONS]
 ```
 
-只列今日新增或调整的仓位。不重复已建立且未变化的。
+字段：SIZE_PCT=仓位占比, STATUS=OPEN/WATCH/CLOSED, STOP=硬止损价位。只列新增或调整。
+
+### 3e. 🛡️ 组合自检（必须输出）
+
+- **集中度**：所有活跃仓位的地区/行业分布
+- **相关性风险**：同一冲击下同向波动的仓位组合
+- **最大单日回撤**：最差情景下组合一日亏损估算
+- **建议调整**：如果集中或相关性过高，建议的对冲
 
 ## 然后追加两个部分
 

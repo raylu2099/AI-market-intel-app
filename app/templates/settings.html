@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Settings — Market Intel{% endblock %}
+{% block content %}
+
+<h1 class="text-xl font-bold mb-4">⚙️ Settings</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="bg-gray-900 rounded-lg p-5 border border-gray-800">
+        <h2 class="text-sm font-semibold text-gray-400 mb-3">WATCHLIST</h2>
+        {% for ticker, name in cfg.watchlist %}
+        <div class="py-1.5 border-b border-gray-800 last:border-0">
+            <span class="font-medium">{{ name }}</span>
+            <span class="text-gray-500 ml-1">{{ ticker }}</span>
+        </div>
+        {% endfor %}
+        <p class="text-xs text-gray-500 mt-3">Edit WATCHLIST in .env to change</p>
+    </div>
+
+    <div class="bg-gray-900 rounded-lg p-5 border border-gray-800">
+        <h2 class="text-sm font-semibold text-gray-400 mb-3">CONFIGURATION</h2>
+        <div class="space-y-2 text-sm">
+            <div><span class="text-gray-400">Timezone:</span> {{ cfg.market_tz }}</div>
+            <div><span class="text-gray-400">History window:</span> {{ cfg.history_window_days }} days</div>
+            <div><span class="text-gray-400">Claude runner:</span> {{ cfg.claude_runner }}</div>
+            <div><span class="text-gray-400">Claude model:</span> {{ cfg.claude_model }}</div>
+            <div><span class="text-gray-400">Perplexity search:</span> {{ cfg.pplx_model_search }}</div>
+            <div><span class="text-gray-400">Perplexity analysis:</span> {{ cfg.pplx_model_analysis }}</div>
+            <div><span class="text-gray-400">Search context:</span> {{ cfg.pplx_search_context }}</div>
+        </div>
+    </div>
+
+    <div class="bg-gray-900 rounded-lg p-5 border border-gray-800">
+        <h2 class="text-sm font-semibold text-gray-400 mb-3">PATHS</h2>
+        <div class="space-y-2 text-sm text-gray-300 font-mono text-xs">
+            <div>project: {{ cfg.project_root }}</div>
+            <div>data: {{ cfg.data_dir }}</div>
+            <div>logs: {{ cfg.logs_dir }}</div>
+            <div>prompts: {{ cfg.prompts_dir }}</div>
+        </div>
+    </div>
+
+    <div class="bg-gray-900 rounded-lg p-5 border border-gray-800">
+        <h2 class="text-sm font-semibold text-gray-400 mb-3">INDICATOR GLOSSARY</h2>
+        <div class="space-y-1 text-xs max-h-64 overflow-y-auto">
+            {% for key, desc in TOOLTIPS.items() %}
+            <div><span class="text-blue-400">{{ key }}:</span> {{ desc }}</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

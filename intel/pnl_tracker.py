@@ -22,9 +22,13 @@ class TrackedPosition:
     date: str
     horizon: str
     thesis: str
+    size_pct: str = ""          # e.g. "5%"
+    status: str = "OPEN"       # OPEN / WATCH / CLOSED
+    risk_weight: str = ""      # LOW / MED / HIGH
+    stop_price: float | None = None
     current_price: float | None = None
-    pnl_pct: float | None = None  # unrealized P&L %
-    source_category: str = ""     # "china" or "market_close"
+    pnl_pct: float | None = None
+    source_category: str = ""
 
 
 def parse_positions_from_analysis(text: str, category: str) -> list[TrackedPosition]:
@@ -40,15 +44,34 @@ def parse_positions_from_analysis(text: str, category: str) -> list[TrackedPosit
             parts = [p.strip() for p in line.split("|")]
             if len(parts) >= 5:
                 try:
-                    positions.append(TrackedPosition(
-                        ticker=parts[0],
-                        direction=parts[1].upper(),
-                        entry_price=float(parts[2]),
-                        date=parts[3],
-                        horizon=parts[4],
-                        thesis=parts[5] if len(parts) > 5 else "",
-                        source_category=category,
-                    ))
+                    # Support both old (6-field) and new (10-field) format
+                    if len(parts) >= 10:
+                        # New format: TICKER|DIR|SIZE|ENTRY|DATE|STATUS|RISK|HORIZON|STOP|THESIS
+                        stop_raw = parts[8].strip()
+                        positions.append(TrackedPosition(
+                            ticker=parts[0],
+                            direction=parts[1].upper(),
+                            size_pct=parts[2],
+                            entry_price=float(parts[3]),
+                            date=parts[4],
+                            status=parts[5].upper(),
+                            risk_weight=parts[6].upper(),
+                            horizon=parts[7],
+                            stop_price=float(stop_raw) if stop_raw != "-" else None,
+                            thesis=parts[9] if len(parts) > 9 else "",
+                            source_category=category,
+                        ))
+                    else:
+                        # Legacy 6-field format
+                        positions.append(TrackedPosition(
+                            ticker=parts[0],
+                            direction=parts[1].upper(),
+                            entry_price=float(parts[2]),
+                            date=parts[3],
+                            horizon=parts[4],
+                            thesis=parts[5] if len(parts) > 5 else "",
+                            source_category=category,
+                        ))
                 except (ValueError, IndexError):
                     continue
     return positions
@@ -99,25 +122,42 @@ def format_pnl_review(positions: list[TrackedPosition]) -> str:
     lines = ["📊 <b>仓位 P&L 追踪</b>"]
     wins = 0
     losses = 0
+    stopped = 0
     for p in sorted(positions, key=lambda x: x.date):
+        if p.status == "WATCH" or p.direction == "NEUTRAL":
+            continue  # skip non-active positions
+
         if p.pnl_pct is None:
-            status = "—"
+            pnl_str = "—"
         elif p.pnl_pct >= 0:
-            status = f"✅ +{p.pnl_pct:.1f}%"
+            pnl_str = f"✅ +{p.pnl_pct:.1f}%"
             wins += 1
         else:
-            status = f"❌ {p.pnl_pct:.1f}%"
+            pnl_str = f"❌ {p.pnl_pct:.1f}%"
             losses += 1
 
+        # Check stop-loss breach
+        stop_hit = ""
+        if p.stop_price and p.current_price:
+            if p.direction == "LONG" and p.current_price <= p.stop_price:
+                stop_hit = " 🛑 止损触发!"
+                stopped += 1
+            elif p.direction == "SHORT" and p.current_price >= p.stop_price:
+                stop_hit = " 🛑 止损触发!"
+                stopped += 1
+
         price_str = f"${p.current_price:.2f}" if p.current_price else "—"
+        size = f" [{p.size_pct}]" if p.size_pct else ""
         lines.append(
-            f"  {p.date} {p.direction} <b>{p.ticker}</b> "
-            f"入 ${p.entry_price:.2f} → 现 {price_str} = {status}"
+            f"  {p.date} {p.direction}{size} <b>{p.ticker}</b> "
+            f"入 ${p.entry_price:.2f} → 现 {price_str} = {pnl_str}{stop_hit}"
         )
         lines.append(f"    逻辑: {p.thesis}")
 
     total = wins + losses
     if total > 0:
         lines.append(f"\n  <b>胜率: {wins}/{total} ({wins/total:.0%})</b>")
+        if stopped:
+            lines.append(f"  ⚠️ {stopped} 个仓位触发止损")
 
     return "\n".join(lines)

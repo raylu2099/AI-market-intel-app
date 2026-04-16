@@ -2,6 +2,14 @@
 {% block title %}Dashboard — Market Intel{% endblock %}
 {% block content %}
 
+{# U2: Key Insight #}
+{% if key_insight %}
+<div class="mb-4 p-4 bg-blue-900/20 border border-blue-800 rounded-lg">
+    <div class="text-xs text-blue-400 font-semibold mb-1">📌 TODAY'S KEY INSIGHT</div>
+    <div class="text-sm text-gray-200">{{ key_insight }}</div>
+</div>
+{% endif %}
+
 {# Regime Banner #}
 <div class="mb-6 p-4 rounded-lg
     {% if regime.regime == 'GOLDILOCKS' %}bg-green-900/30 border border-green-800
@@ -9,12 +17,12 @@
     {% elif regime.regime == 'STAGFLATION' %}bg-red-900/30 border border-red-800
     {% elif regime.regime == 'DEFLATION' %}bg-blue-900/30 border border-blue-800
     {% else %}bg-gray-900 border border-gray-700{% endif %}">
-    <div class="text-lg font-bold">🌡️ Macro Regime: {{ regime.regime }}</div>
+    <div class="text-lg font-bold" title="{{ tip(regime.regime) }}">🌡️ Macro Regime: {{ regime.regime }}</div>
     <div class="text-sm text-gray-300 mt-1">{{ regime.detail }}</div>
     <div class="text-xs text-gray-400 mt-1">
         SPY 20d: {{ "%.1f"|format(regime.growth_momentum) }}% &bull;
         DXY 20d: {{ "%.1f"|format(regime.inflation_momentum) }}%
-        {% if regime.vix %}&bull; VIX: {{ "%.1f"|format(regime.vix) }} ({{ regime.vix_signal }}){% endif %}
+        {% if regime.vix %}&bull; <span title="{{ tip('VIX') }}">VIX: {{ "%.1f"|format(regime.vix) }} ({{ regime.vix_signal }})</span>{% endif %}
         {% if regime.yield_curve_2s10s is not none %}&bull; Curve: {{ "%.2f"|format(regime.yield_curve_2s10s) }}%{% endif %}
     </div>
 </div>

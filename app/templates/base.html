@@ -34,6 +34,7 @@
                 <a href="/" class="hover:text-white text-gray-400">Dashboard</a>
                 <a href="/stocks" class="hover:text-white text-gray-400">Stocks</a>
                 <a href="/history" class="hover:text-white text-gray-400">History</a>
+                <a href="/settings" class="hover:text-white text-gray-400">Settings</a>
             </div>
         </div>
     </nav>
@@ -41,7 +42,8 @@
         {% block content %}{% endblock %}
     </main>
     <footer class="text-center text-gray-600 text-xs py-4 border-t border-gray-800">
-        Market Intel v1.0 &mdash; Powered by Claude AI + Perplexity
+        Market Intel v1.0 &mdash; Powered by Claude AI + Perplexity &mdash; <span id="timestamp"></span>
+        <script>document.getElementById('timestamp').textContent = 'Data as of ' + new Date().toLocaleTimeString();</script>
     </footer>
 </body>
 </html>

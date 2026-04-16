@@ -17,7 +17,8 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import Depends, FastAPI, Request, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -38,13 +39,34 @@ from intel.events import upcoming_earnings, upcoming_macro_events
 from intel.cost_tracker import load_weekly_costs
 from intel.pnl_tracker import load_all_positions, compute_pnl
 
+from .auth import verify_api_key
+from .tooltips import tip, TOOLTIPS
+
 app = FastAPI(title="Market Intel", version="1.0.0")
+
+# S2: CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
+
+# S3: Valid slot names
+VALID_SLOTS = {
+    "premarket", "open", "midday", "close",
+    "stocks_pre", "stocks_post", "china_open",
+    "weekly_review", "watchdog",
+}
 
 # Static files and templates
 STATIC_DIR = Path(__file__).parent / "static"
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+# Make tooltips available in all templates
+templates.env.globals["tip"] = tip
+templates.env.globals["TOOLTIPS"] = TOOLTIPS
 
 
 def _cfg():
@@ -66,6 +88,22 @@ async def dashboard(request: Request):
     china_analyses = load_recent_analyses(cfg, "china", 3)
     close_analyses = load_recent_analyses(cfg, "market_close", 3)
 
+    # U2: Extract today's key insight from latest analysis
+    key_insight = ""
+    for analyses in [close_analyses, china_analyses]:
+        if analyses:
+            _, content = analyses[-1]
+            # Extract first 2-3 sentences from macro narrative section
+            for line in content.split("\n"):
+                line = line.strip()
+                if len(line) > 50 and not line.startswith(("━", "<b>", "📝", "💹", "🎯", "#")):
+                    key_insight = line[:300]
+                    if len(line) > 300:
+                        key_insight += "…"
+                    break
+            if key_insight:
+                break
+
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "watchlist": wl_quotes,
@@ -75,6 +113,8 @@ async def dashboard(request: Request):
         "earnings_alert": earnings,
         "china_analyses": china_analyses,
         "close_analyses": close_analyses,
+        "key_insight": key_insight,
+        "valid_slots": sorted(VALID_SLOTS),
         "now": datetime.now(),
     })
 
@@ -144,8 +184,21 @@ async def stocks(request: Request):
     })
 
 
+@app.get("/settings", response_class=HTMLResponse)
+async def settings(request: Request):
+    """U5: Read-only settings page."""
+    cfg = _cfg()
+    return templates.TemplateResponse("settings.html", {
+        "request": request,
+        "cfg": cfg,
+        "now": datetime.now(),
+    })
+
+
+# --- API endpoints (S1: authenticated) ---
+
 @app.get("/api/status", response_class=JSONResponse)
-async def api_status():
+async def api_status(api_key: str = Depends(verify_api_key)):
     cfg = _cfg()
     costs = load_weekly_costs(cfg, 7)
     positions = load_all_positions(cfg, 7)
@@ -159,7 +212,12 @@ async def api_status():
 
 
 @app.post("/api/run/{slot}")
-async def api_run_slot(slot: str):
+async def api_run_slot(slot: str, api_key: str = Depends(verify_api_key)):
+    # S3: Input validation
+    if slot not in VALID_SLOTS:
+        raise HTTPException(
+            400, f"Invalid slot '{slot}'. Valid: {sorted(VALID_SLOTS)}"
+        )
     cfg = _cfg()
     runner = PROJECT_ROOT / "bin" / "run-slot.sh"
     if not runner.exists():
