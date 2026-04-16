@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ category|title }} — {{ date }} — Market Intel{% endblock %}
+{% block content %}
+
+<div class="mb-4">
+    <a href="/history" class="text-blue-400 text-sm hover:underline">&larr; History</a>
+</div>
+
+<div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+    <div class="flex justify-between items-center mb-4">
+        <h1 class="text-xl font-bold">
+            {% if category == 'china' %}🇨🇳 China Brief
+            {% elif category == 'market_close' %}🏁 US Close
+            {% elif category == 'weekly_review' %}📋 Weekly Review
+            {% else %}{{ category }}{% endif %}
+        </h1>
+        <span class="text-gray-400">{{ date }}</span>
+    </div>
+    <div class="analysis-content text-gray-200 text-sm leading-relaxed">{{ content }}</div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}History — Market Intel{% endblock %}
+{% block content %}
+
+<h1 class="text-xl font-bold mb-4">📚 Analysis History</h1>
+
+<div class="bg-gray-900 rounded-lg border border-gray-800">
+    {% for e in entries %}
+    <a href="/analysis/{{ e.category }}/{{ e.date }}"
+       class="flex justify-between items-center px-4 py-3 border-b border-gray-800 last:border-0 hover:bg-gray-800/50">
+        <div>
+            <span class="inline-block w-20 text-xs px-2 py-0.5 rounded
+                {% if e.category == 'china' %}bg-red-900/50 text-red-300
+                {% elif e.category == 'market_close' %}bg-blue-900/50 text-blue-300
+                {% else %}bg-gray-700 text-gray-300{% endif %}">
+                {{ e.category }}
+            </span>
+            <span class="ml-3 text-gray-200">{{ e.date }}</span>
+        </div>
+        <span class="text-gray-500 text-xs">{{ "%.1f"|format(e.size / 1024) }} KB</span>
+    </a>
+    {% else %}
+    <p class="text-gray-500 text-sm p-4">No analyses yet.</p>
+    {% endfor %}
+</div>
+
+{% endblock %}

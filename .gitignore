@@ -1,0 +1,13 @@
+.env
+.ghtoken
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.DS_Store
+data/
+logs/
+*.log

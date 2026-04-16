@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Market Intel{% endblock %}
+{% block content %}
+
+{# Regime Banner #}
+<div class="mb-6 p-4 rounded-lg
+    {% if regime.regime == 'GOLDILOCKS' %}bg-green-900/30 border border-green-800
+    {% elif regime.regime == 'REFLATION' %}bg-yellow-900/30 border border-yellow-800
+    {% elif regime.regime == 'STAGFLATION' %}bg-red-900/30 border border-red-800
+    {% elif regime.regime == 'DEFLATION' %}bg-blue-900/30 border border-blue-800
+    {% else %}bg-gray-900 border border-gray-700{% endif %}">
+    <div class="text-lg font-bold">🌡️ Macro Regime: {{ regime.regime }}</div>
+    <div class="text-sm text-gray-300 mt-1">{{ regime.detail }}</div>
+    <div class="text-xs text-gray-400 mt-1">
+        SPY 20d: {{ "%.1f"|format(regime.growth_momentum) }}% &bull;
+        DXY 20d: {{ "%.1f"|format(regime.inflation_momentum) }}%
+        {% if regime.vix %}&bull; VIX: {{ "%.1f"|format(regime.vix) }} ({{ regime.vix_signal }}){% endif %}
+        {% if regime.yield_curve_2s10s is not none %}&bull; Curve: {{ "%.2f"|format(regime.yield_curve_2s10s) }}%{% endif %}
+    </div>
+</div>
+
+{# Market Grid #}
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+    {# Watchlist #}
+    <div class="bg-gray-900 rounded-lg p-4 border border-gray-800">
+        <h2 class="text-sm font-semibold text-gray-400 mb-3">📊 WATCHLIST</h2>
+        {% for q in watchlist %}
+        <div class="flex justify-between py-1.5 border-b border-gray-800 last:border-0">
+            <span class="font-medium">{{ q.name }} <span class="text-gray-500">{{ q.ticker }}</span></span>
+            {% if q.ok %}
+            <span class="{{ 'ticker-up' if q.pct >= 0 else 'ticker-down' }}">
+                ${{ "%.2f"|format(q.last) }}
+                <span class="text-xs">({{ "%+.2f"|format(q.pct) }}%)</span>
+            </span>
+            {% else %}
+            <span class="text-gray-500">—</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    {# Macro #}
+    <div class="bg-gray-900 rounded-lg p-4 border border-gray-800">
+        <h2 class="text-sm font-semibold text-gray-400 mb-3">💰 MACRO</h2>
+        {% for q in macro %}
+        <div class="flex justify-between py-1.5 border-b border-gray-800 last:border-0">
+            <span>{{ q.name }}</span>
+            {% if q.ok %}
+            <span class="{{ 'ticker-up' if q.pct >= 0 else 'ticker-down' }}">
+                {% if q.ticker == 'GC=F' %}${{ "%.0f"|format(q.last) }}
+                {% elif q.ticker == 'USDCNY=X' %}{{ "%.3f"|format(q.last) }}
+                {% elif q.ticker == '^TNX' %}{{ "%.2f"|format(q.last) }}%
+                {% else %}{{ "%.2f"|format(q.last) }}{% endif %}
+                <span class="text-xs">({{ "%+.2f"|format(q.pct) }}%)</span>
+            </span>
+            {% else %}<span class="text-gray-500">—</span>{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    {# Radar #}
+    <div class="bg-gray-900 rounded-lg p-4 border border-gray-800">
+        <h2 class="text-sm font-semibold text-gray-400 mb-3">🔭 MARKET RADAR</h2>
+        {% for q in radar %}
+        <div class="flex justify-between py-1.5 border-b border-gray-800 last:border-0">
+            <span>{{ q.name }}</span>
+            {% if q.ok %}
+            <span class="{{ 'ticker-up' if q.pct >= 0 else 'ticker-down' }}">
+                ${{ "%.2f"|format(q.last) }}
+                <span class="text-xs">({{ "%+.2f"|format(q.pct) }}%)</span>
+            </span>
+            {% else %}<span class="text-gray-500">—</span>{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{# Events #}
+{% if earnings_alert and '无' not in earnings_alert %}
+<div class="bg-yellow-900/20 border border-yellow-800 rounded-lg p-4 mb-6">
+    <h2 class="text-sm font-semibold text-yellow-400 mb-2">⚠️ UPCOMING EARNINGS</h2>
+    <div class="text-sm">{{ earnings_alert }}</div>
+</div>
+{% endif %}
+
+{# Latest Analyses #}
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="bg-gray-900 rounded-lg p-4 border border-gray-800">
+        <h2 class="text-sm font-semibold text-gray-400 mb-3">🇨🇳 CHINA BRIEF (Recent)</h2>
+        {% for date, content in china_analyses[-3:]|reverse %}
+        <a href="/analysis/china/{{ date }}" class="block py-2 border-b border-gray-800 last:border-0 hover:bg-gray-800/50 px-2 rounded">
+            <span class="text-blue-400">{{ date }}</span>
+            <span class="text-gray-400 text-sm ml-2">{{ content[:100] }}...</span>
+        </a>
+        {% else %}
+        <p class="text-gray-500 text-sm">No analyses yet. System will start generating after first cron run.</p>
+        {% endfor %}
+    </div>
+    <div class="bg-gray-900 rounded-lg p-4 border border-gray-800">
+        <h2 class="text-sm font-semibold text-gray-400 mb-3">🏁 US CLOSE (Recent)</h2>
+        {% for date, content in close_analyses[-3:]|reverse %}
+        <a href="/analysis/market_close/{{ date }}" class="block py-2 border-b border-gray-800 last:border-0 hover:bg-gray-800/50 px-2 rounded">
+            <span class="text-blue-400">{{ date }}</span>
+            <span class="text-gray-400 text-sm ml-2">{{ content[:100] }}...</span>
+        </a>
+        {% else %}
+        <p class="text-gray-500 text-sm">No analyses yet.</p>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Stocks — Market Intel{% endblock %}
+{% block content %}
+
+<h1 class="text-xl font-bold mb-4">📈 Watchlist Deep Dive</h1>
+
+{% for s in stocks %}
+<div class="bg-gray-900 rounded-lg p-5 border border-gray-800 mb-4">
+    <div class="flex justify-between items-start mb-3">
+        <div>
+            <span class="text-lg font-bold">{{ s.name }}</span>
+            <span class="text-gray-400 ml-1">{{ s.ticker }}</span>
+        </div>
+        {% if s.quote and s.quote.ok %}
+        <div class="text-right">
+            <div class="text-xl font-bold {{ 'ticker-up' if s.quote.pct >= 0 else 'ticker-down' }}">
+                ${{ "%.2f"|format(s.quote.last) }}
+            </div>
+            <div class="text-sm {{ 'ticker-up' if s.quote.pct >= 0 else 'ticker-down' }}">
+                {{ "%+.2f"|format(s.quote.pct) }}%
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+        {# Technicals #}
+        {% if s.tech and s.tech.ok %}
+        <div>
+            <h3 class="text-gray-400 font-semibold mb-1">📐 Technicals</h3>
+            {% if s.tech.sma50 and s.tech.sma200 %}
+            <div>SMA: 50d={{ "%.1f"|format(s.tech.sma50) }} / 200d={{ "%.1f"|format(s.tech.sma200) }} → {{ s.tech.sma_signal }}</div>
+            {% endif %}
+            {% if s.tech.rsi14 is not none %}
+            <div>RSI14: {{ "%.1f"|format(s.tech.rsi14) }} ({{ s.tech.rsi_signal }})</div>
+            {% endif %}
+            {% if s.tech.pct_from_52w_high is not none %}
+            <div>52w: {{ "%+.1f"|format(s.tech.pct_from_52w_high) }}% from high</div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {# Valuation #}
+        {% if s.val and s.val.ok %}
+        <div>
+            <h3 class="text-gray-400 font-semibold mb-1">💎 Valuation</h3>
+            {% if s.val.trailing_pe %}<div>P/E: {{ "%.1f"|format(s.val.trailing_pe) }}</div>{% endif %}
+            {% if s.val.forward_pe %}<div>Fwd P/E: {{ "%.1f"|format(s.val.forward_pe) }}</div>{% endif %}
+            {% if s.val.target_mean %}<div>Target: ${{ "%.0f"|format(s.val.target_mean) }}
+                {% if s.val.num_analysts %}({{ s.val.num_analysts }} analysts){% endif %}</div>{% endif %}
+        </div>
+        {% endif %}
+
+        {# Earnings #}
+        {% if s.earn and s.earn.quarters %}
+        <div>
+            <h3 class="text-gray-400 font-semibold mb-1">📈 Earnings</h3>
+            {% set q = s.earn.quarters[0] %}
+            <div>{{ q.fiscal_period }}: EPS ${{ "%.2f"|format(q.eps_actual) }}
+                {% if q.surprise == 'BEAT' %}✅{% elif q.surprise == 'MISS' %}❌{% endif %}</div>
+            {% if q.revenue_yoy_pct is not none %}
+            <div>Revenue YoY: {{ "%+.0f"|format(q.revenue_yoy_pct) }}%</div>
+            {% endif %}
+            {% if s.earn.beat_rate is not none %}
+            <div>Beat rate: {{ "%.0f"|format(s.earn.beat_rate * 100) }}%</div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    {# Short interest #}
+    {% if s.short and s.short.short_pct_float is not none %}
+    <div class="mt-2 text-xs text-gray-400">
+        Short: {{ "%.1f"|format(s.short.short_pct_float) }}% float
+        {% if s.short.short_ratio %}, {{ "%.1f"|format(s.short.short_ratio) }}d to cover{% endif %}
+        ({{ s.short.signal }})
+    </div>
+    {% endif %}
+</div>
+{% endfor %}
+
+{% endblock %}
