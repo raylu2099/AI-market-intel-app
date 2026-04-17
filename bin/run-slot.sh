@@ -18,16 +18,16 @@ if [ -f "$LOG" ] && [ "$(wc -c < "$LOG" 2>/dev/null || echo 0)" -gt 1048576 ]; t
     tail -300 "$LOG" > "${LOG}.tmp" && mv "${LOG}.tmp" "$LOG"
 fi
 
-# Detect Python env: prefer project .venv, fall back to micromamba
+# Detect Python env: prefer project .venv, fall back to micromamba ytdlp env
+MICROMAMBA="/volume1/homes/hellolufeng/bin/micromamba"
+MAMBA_YTDLP_PYTHON="/volume1/homes/hellolufeng/micromamba/envs/ytdlp/bin/python3"
+
 if [ -f "$PROJECT_DIR/.venv/bin/python" ]; then
     PYTHON="$PROJECT_DIR/.venv/bin/python"
-elif [ -n "$MAMBA_ROOT_PREFIX" ]; then
-    PYTHON="$(command -v python3 2>/dev/null || echo python3)"
-elif [ -x "$HOME/bin/micromamba" ]; then
-    export MAMBA_ROOT_PREFIX="${MAMBA_ROOT_PREFIX:-$HOME/micromamba}"
-    eval "$("$HOME/bin/micromamba" shell hook -s bash 2>/dev/null)" || true
-    micromamba activate ytdlp 2>/dev/null || true
-    PYTHON="$(command -v python3)"
+elif [ -x "$MAMBA_YTDLP_PYTHON" ]; then
+    # Direct path — works regardless of $HOME or cron user (root vs hellolufeng)
+    PYTHON="$MAMBA_YTDLP_PYTHON"
+    export MAMBA_ROOT_PREFIX="/volume1/homes/hellolufeng/micromamba"
 else
     PYTHON="python3"
 fi
@@ -35,8 +35,10 @@ fi
 # Export CLAUDE_ROLE so hooks skip Telegram notifications for cron runs
 export CLAUDE_ROLE=cron-intel
 
-# Set PATH to include claude CLI
-export PATH="$HOME/.local/bin:$HOME/bin:$PROJECT_DIR/.venv/bin:$PATH"
+# Set PATH to include claude CLI and micromamba tools (absolute paths for cron/root)
+OWNER_HOME="/volume1/homes/hellolufeng"
+export PATH="$OWNER_HOME/.local/bin:$OWNER_HOME/bin:$OWNER_HOME/micromamba/envs/ytdlp/bin:$PROJECT_DIR/.venv/bin:$PATH"
+export HOME="$OWNER_HOME"
 
 cd "$PROJECT_DIR"
 

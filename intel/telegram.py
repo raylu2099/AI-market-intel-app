@@ -34,43 +34,70 @@ def split_message(text: str, limit: int = SAFE_CHARS) -> list[str]:
     return chunks
 
 
+def _strip_html(text: str) -> str:
+    """Fallback: remove all HTML tags for plain-text send when HTML parsing fails."""
+    import re
+    text = re.sub(r"</?[a-zA-Z][^>]*>", "", text)
+    # Replace HTML entities
+    text = text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+    return text
+
+
+def _post_tg(cfg: Config, text: str, parse_mode: str | None) -> tuple[bool, int]:
+    """Single POST attempt. Returns (ok, http_code). http_code 0 on network error."""
+    params = {
+        "chat_id": cfg.telegram_chat_id,
+        "text": text[:TG_MAX_CHARS],
+        "disable_web_page_preview": "true",
+    }
+    if parse_mode:
+        params["parse_mode"] = parse_mode
+    data = urllib.parse.urlencode(params).encode()
+    url = f"https://api.telegram.org/bot{cfg.telegram_bot_token}/sendMessage"
+    req = urllib.request.Request(url, data=data, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            return bool(json.loads(resp.read().decode()).get("ok")), 200
+    except urllib.error.HTTPError as e:
+        return False, e.code
+    except Exception:
+        return False, 0
+
+
 def send_message(
     cfg: Config, text: str, parse_mode: str = "HTML", retries: int = 3
 ) -> bool:
-    """Send with exponential backoff retry on 429 / transient errors."""
-    data = urllib.parse.urlencode(
-        {
-            "chat_id": cfg.telegram_chat_id,
-            "text": text[:TG_MAX_CHARS],
-            "parse_mode": parse_mode,
-            "disable_web_page_preview": "true",
-        }
-    ).encode()
-    url = f"https://api.telegram.org/bot{cfg.telegram_bot_token}/sendMessage"
+    """
+    Send with retry on 429. On 400 (bad HTML), auto-fallback to plain text.
+    """
+    import time
 
     for attempt in range(retries):
-        req = urllib.request.Request(url, data=data, method="POST")
-        try:
-            with urllib.request.urlopen(req, timeout=20) as resp:
-                return bool(json.loads(resp.read().decode()).get("ok"))
-        except urllib.error.HTTPError as e:
-            if e.code == 429 and attempt < retries - 1:
-                wait = 2 ** (attempt + 1)
-                print(
-                    f"[telegram] 429 rate-limited, retry in {wait}s", file=sys.stderr
-                )
-                import time
-                time.sleep(wait)
-                continue
-            print(f"[telegram] HTTP {e.code}: {e.reason}", file=sys.stderr)
+        ok, code = _post_tg(cfg, text, parse_mode)
+        if ok:
+            return True
+        if code == 429 and attempt < retries - 1:
+            wait = 2 ** (attempt + 1)
+            print(f"[telegram] 429 rate-limited, retry in {wait}s", file=sys.stderr)
+            time.sleep(wait)
+            continue
+        if code == 400 and parse_mode:
+            # HTML parse error — strip tags and retry as plain text
+            print(
+                f"[telegram] HTTP 400 with HTML parse, falling back to plain text",
+                file=sys.stderr,
+            )
+            plain = _strip_html(text)
+            ok2, code2 = _post_tg(cfg, plain, None)
+            if ok2:
+                return True
+            print(f"[telegram] plain fallback also failed: HTTP {code2}", file=sys.stderr)
             return False
-        except Exception as e:
-            if attempt < retries - 1:
-                import time
-                time.sleep(1)
-                continue
-            print(f"[telegram] send failed after {retries} tries: {e}", file=sys.stderr)
-            return False
+        if code == 0 and attempt < retries - 1:
+            time.sleep(1)
+            continue
+        print(f"[telegram] send failed: HTTP {code}", file=sys.stderr)
+        return False
     return False
 
 
