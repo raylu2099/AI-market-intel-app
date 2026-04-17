@@ -10,6 +10,8 @@ from ..config import Config
 from ..cftc import fetch_cot_data, format_cot_for_analyst
 from ..earnings import fetch_all_earnings, format_earnings_for_analyst
 from ..fred import fetch_fred_indicators, format_fred_for_analyst
+from ..news_sentiment import fetch_news_sentiment as fetch_av_sentiment
+from ..news_sentiment import format_sentiment_for_analyst as format_av_for_analyst
 from ..sector_rotation import compute_sector_rotation, format_sector_for_analyst
 from ..sentiment import fetch_sentiment, format_sentiment_for_analyst
 from ..events import upcoming_earnings
@@ -94,6 +96,7 @@ def _build_user_prompt(
     cot_data=None,
     sector_perfs=None,
     fred_data=None,
+    av_sentiment=None,
 ) -> str:
     watchlist_str = ", ".join(f"{t} ({n})" for t, n in cfg.watchlist)
     parts = [
@@ -133,6 +136,10 @@ def _build_user_prompt(
 
     if fred_data:
         parts.append(format_fred_for_analyst(fred_data))
+        parts.append("")
+
+    if av_sentiment:
+        parts.append(format_av_for_analyst(av_sentiment))
         parts.append("")
 
     if macro_quotes:
@@ -199,12 +206,13 @@ def run(cfg: Config) -> SlotResult:
     cot_data = fetch_cot_data()
     sector_perfs = compute_sector_rotation()
     fred_data = fetch_fred_indicators()
+    av_sentiment = fetch_av_sentiment(cfg, list(cfg.watchlist))
 
     system_prompt = load_prompt(cfg, "market_close_analyst")
     user_prompt = _build_user_prompt(
         cfg, articles, history, past_analyses,
         tech_snaps, val_snaps, macro_quotes, regime, earnings_profiles,
-        sentiment, cot_data, sector_perfs, fred_data,
+        sentiment, cot_data, sector_perfs, fred_data, av_sentiment,
     )
     analysis_md = analyze(cfg, system_prompt, user_prompt)
     save_analysis(cfg, CATEGORY, date_str, analysis_md)
