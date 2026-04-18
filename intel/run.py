@@ -21,7 +21,6 @@ from .slots import china_open, market_brief, market_close, stock_brief
 from .slots import weekly_review, watchdog
 from .storage import save_push
 from .telegram import send_message
-from .urgency import get_vix, urgency_banner
 
 
 def _make_runners(cfg):
@@ -101,11 +100,10 @@ def main() -> int:
     if not result.messages:
         return 0
 
-    # P2: VIX-driven urgency banner
-    vix = get_vix()
-    banner = urgency_banner(vix)
-    if banner and result.messages:
-        result.messages[0] = banner + result.messages[0]
+    # Urgency banner removed (2026-04-17) — user is long-term value investor,
+    # VIX panic signals are short-term noise. Code path disabled, modules
+    # (intel/urgency.py, sentiment.py, sector_rotation.py, etc.) retained on
+    # disk for future optionality.
 
     # P10: Cold start guidance — first 7 days
     _add_cold_start_marker(cfg, result)

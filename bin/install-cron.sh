@@ -12,21 +12,19 @@ USER="${CRON_USER:-$(whoami)}"
 MARKER="# === market-intel slots ==="
 
 # All times in the NAS local timezone (cron runs in system TZ)
+# Simplified for long-term value investor focus: retains Claude-driven deep
+# analysis (close, china_open, weekly_review) + per-stock news (Ray reads
+# occasionally). Removed short-term slots (premarket, open, midday, watchdog)
+# per user directive 2026-04-17 (shift to value-investing paradigm).
 CRON_BLOCK="$MARKER
 # Deep analysis slots (Claude)
 30 18 * * * $USER $RUNNER china_open
 0 13 * * 1-5 $USER $RUNNER close
-# Light market briefs (Perplexity)
-0 6 * * 1-5 $USER $RUNNER premarket
-30 6 * * 1-5 $USER $RUNNER open
-30 9 * * 1-5 $USER $RUNNER midday
-# Per-stock news
+# Per-stock news (occasional reading)
 30 5 * * 1-5 $USER $RUNNER stocks_pre
 30 13 * * 1-5 $USER $RUNNER stocks_post
 # Weekly review (Fridays 14:00 PT)
-0 14 * * 5 $USER $RUNNER weekly_review
-# Breaking news watchdog (every 15 min)
-*/15 * * * * $USER $RUNNER watchdog"
+0 14 * * 5 $USER $RUNNER weekly_review"
 
 # Also remove old market-push entries if present
 OLD_MARKER_1="# === Market push tasks ==="
